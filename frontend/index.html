@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoAnalyst — Autonomous Data Analysis Platform</title>
+  <meta name="description" content="Upload any CSV file for instant AI-powered data cleaning, EDA, visualizations, and comprehensive reports." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ═══════════════ HERO / HEADER ═══════════════ -->
+  <header class="header" id="top">
+    <nav class="nav">
+      <div class="logo">
+        <div class="logo-icon">⚡</div>
+        <span>Auto<strong>Analyst</strong></span>
+      </div>
+      <div class="nav-pills">
+        <a href="#upload-section" class="pill active">Analyze</a>
+        <a href="#report-section" class="pill" id="nav-report" style="display:none">Report</a>
+      </div>
+    </nav>
+
+    <div class="hero">
+      <div class="hero-badge">🤖 AI-Powered · Autonomous · Instant</div>
+      <h1>Autonomous Data<br /><span class="gradient-text">Analyst</span></h1>
+      <p class="hero-sub">Upload any CSV — get instant data cleaning, EDA, visualizations & a comprehensive report in seconds.</p>
+      <div class="hero-stats">
+        <div class="stat"><span class="stat-num">5+</span><span>Chart Types</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">10+</span><span>EDA Metrics</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">100%</span><span>Automated</span></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════ UPLOAD SECTION ═══════════════ -->
+  <main>
+    <section class="upload-section" id="upload-section">
+      <div class="upload-card" id="upload-card">
+        <div class="upload-zone" id="drop-zone">
+          <div class="upload-icon-wrap">
+            <div class="upload-icon">📂</div>
+          </div>
+          <h2>Drop your CSV file here</h2>
+          <p>or click to browse files</p>
+          <label class="file-btn" for="file-input" id="file-label">
+            Choose File
+            <input type="file" id="file-input" accept=".csv" hidden />
+          </label>
+          <div class="file-types">Supported: <strong>.csv</strong> · Any size</div>
+        </div>
+
+        <div class="selected-file hidden" id="selected-file">
+          <div class="file-info">
+            <div class="file-icon">📄</div>
+            <div class="file-meta">
+              <span class="file-name" id="file-name-display">—</span>
+              <span class="file-size" id="file-size-display">—</span>
+            </div>
+            <button class="clear-btn" id="clear-btn" title="Remove">✕</button>
+          </div>
+          <button class="analyze-btn" id="analyze-btn">
+            <span class="btn-icon">🔬</span>
+            Run Full Analysis
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ PROGRESS ═══════════════ -->
+    <section class="progress-section hidden" id="progress-section">
+      <div class="progress-card">
+        <div class="progress-spinner"></div>
+        <h3 id="progress-label">Initialising analysis…</h3>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="progress-steps" id="progress-steps">
+          <span class="step" id="step-upload">📤 Uploading</span>
+          <span class="step" id="step-clean">🧹 Cleaning</span>
+          <span class="step" id="step-eda">📊 EDA</span>
+          <span class="step" id="step-viz">🎨 Visualising</span>
+          <span class="step" id="step-report">📋 Report</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ REPORT SECTION ═══════════════ -->
+    <section class="report-section hidden" id="report-section">
+
+      <!-- Top action bar -->
+      <div class="report-topbar">
+        <div class="report-title">
+          <span>📊</span>
+          <div>
+            <h2 id="report-filename">Analysis Report</h2>
+            <span class="report-timestamp" id="report-ts"></span>
+          </div>
+        </div>
+        <button class="download-btn" id="download-btn">⬇ Download Report</button>
+      </div>
+
+      <!-- Score + overview cards -->
+      <div class="kpi-row" id="kpi-row"></div>
+
+      <!-- Tab navigation -->
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="cleaning">🧹 Data Cleaning</button>
+        <button class="tab-btn" data-tab="eda">📈 EDA</button>
+        <button class="tab-btn" data-tab="charts">🎨 Visualisations</button>
+        <button class="tab-btn" data-tab="preview">🗃 Data Preview</button>
+        <button class="tab-btn" data-tab="insights">💡 Insights</button>
+      </div>
+
+      <!-- Tab panels -->
+      <div class="tab-panel" id="tab-cleaning"></div>
+      <div class="tab-panel hidden" id="tab-eda"></div>
+      <div class="tab-panel hidden" id="tab-charts"></div>
+      <div class="tab-panel hidden" id="tab-preview"></div>
+      <div class="tab-panel hidden" id="tab-insights"></div>
+
+    </section>
+
+    <!-- ═══════════════ ERROR ═══════════════ -->
+    <div class="error-toast hidden" id="error-toast">
+      <span class="error-icon">⚠</span>
+      <span id="error-message">Something went wrong.</span>
+      <button onclick="document.getElementById('error-toast').classList.add('hidden')">✕</button>
+    </div>
+  </main>
+
+  <!-- ═══════════════ FOOTER ═══════════════ -->
+  <footer class="footer">
+    <p>AutoAnalyst · Autonomous Data Analysis Platform · Built with FastAPI + Python</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
