@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AutoAnalyst — Autonomous Data Analysis Platform</title>
-  <meta name="description" content="Upload any CSV file for instant AI-powered data cleaning, EDA, visualizations, and comprehensive reports." />
+  <meta name="description" content="Upload any CSV for instant AI-powered data cleaning, EDA, AutoML predictions, anomaly detection, time series analysis, and a quality scorecard." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -17,6 +17,7 @@
       <div class="logo">
         <div class="logo-icon">⚡</div>
         <span>Auto<strong>Analyst</strong></span>
+        <span class="version-badge">v2.0 · Phase 1</span>
       </div>
       <div class="nav-pills">
         <a href="#upload-section" class="pill active">Analyze</a>
@@ -25,13 +26,15 @@
     </nav>
 
     <div class="hero">
-      <div class="hero-badge">🤖 AI-Powered · Autonomous · Instant</div>
+      <div class="hero-badge">🤖 AI-Powered · Autonomous · Phase 1 Active</div>
       <h1>Autonomous Data<br /><span class="gradient-text">Analyst</span></h1>
-      <p class="hero-sub">Upload any CSV — get instant data cleaning, EDA, visualizations & a comprehensive report in seconds.</p>
+      <p class="hero-sub">Upload any CSV — get instant data cleaning, EDA, AutoML predictions, anomaly detection, time series insights &amp; quality scorecard.</p>
       <div class="hero-stats">
         <div class="stat"><span class="stat-num">5+</span><span>Chart Types</span></div>
         <div class="stat-divider"></div>
-        <div class="stat"><span class="stat-num">10+</span><span>EDA Metrics</span></div>
+        <div class="stat"><span class="stat-num">AutoML</span><span>4 Models</span></div>
+        <div class="stat-divider"></div>
+        <div class="stat"><span class="stat-num">7-Dim</span><span>Quality Score</span></div>
         <div class="stat-divider"></div>
         <div class="stat"><span class="stat-num">100%</span><span>Automated</span></div>
       </div>
@@ -50,7 +53,7 @@
           <p>or click to browse files</p>
           <label class="file-btn" for="file-input" id="file-label">
             Choose File
-            <input type="file" id="file-input" accept=".csv" hidden />
+            <input type="file" id="file-input" accept=".csv,.CSV" hidden />
           </label>
           <div class="file-types">Supported: <strong>.csv</strong> · Any size</div>
         </div>
@@ -66,7 +69,7 @@
           </div>
           <button class="analyze-btn" id="analyze-btn">
             <span class="btn-icon">🔬</span>
-            Run Full Analysis
+            Run Full Analysis (Phase 1)
           </button>
         </div>
       </div>
@@ -85,7 +88,10 @@
           <span class="step" id="step-clean">🧹 Cleaning</span>
           <span class="step" id="step-eda">📊 EDA</span>
           <span class="step" id="step-viz">🎨 Visualising</span>
-          <span class="step" id="step-report">📋 Report</span>
+          <span class="step" id="step-ml">🤖 AutoML</span>
+          <span class="step" id="step-anomaly">🚨 Anomalies</span>
+          <span class="step" id="step-ts">📈 Time Series</span>
+          <span class="step" id="step-report">📋 Scorecard</span>
         </div>
       </div>
     </section>
@@ -110,10 +116,14 @@
 
       <!-- Tab navigation -->
       <div class="tab-bar">
-        <button class="tab-btn active" data-tab="cleaning">🧹 Data Cleaning</button>
+        <button class="tab-btn active" data-tab="cleaning">🧹 Cleaning</button>
         <button class="tab-btn" data-tab="eda">📈 EDA</button>
-        <button class="tab-btn" data-tab="charts">🎨 Visualisations</button>
-        <button class="tab-btn" data-tab="preview">🗃 Data Preview</button>
+        <button class="tab-btn" data-tab="charts">🎨 Charts</button>
+        <button class="tab-btn" data-tab="quality">🏅 Quality</button>
+        <button class="tab-btn" data-tab="ml">🤖 AutoML</button>
+        <button class="tab-btn" data-tab="anomaly">🚨 Anomalies</button>
+        <button class="tab-btn" data-tab="timeseries">📈 Time Series</button>
+        <button class="tab-btn" data-tab="preview">🗃 Preview</button>
         <button class="tab-btn" data-tab="insights">💡 Insights</button>
       </div>
 
@@ -121,6 +131,10 @@
       <div class="tab-panel" id="tab-cleaning"></div>
       <div class="tab-panel hidden" id="tab-eda"></div>
       <div class="tab-panel hidden" id="tab-charts"></div>
+      <div class="tab-panel hidden" id="tab-quality"></div>
+      <div class="tab-panel hidden" id="tab-ml"></div>
+      <div class="tab-panel hidden" id="tab-anomaly"></div>
+      <div class="tab-panel hidden" id="tab-timeseries"></div>
       <div class="tab-panel hidden" id="tab-preview"></div>
       <div class="tab-panel hidden" id="tab-insights"></div>
 
@@ -136,9 +150,10 @@
 
   <!-- ═══════════════ FOOTER ═══════════════ -->
   <footer class="footer">
-    <p>AutoAnalyst · Autonomous Data Analysis Platform · Built with FastAPI + Python</p>
+    <p>AutoAnalyst v2.0 · Phase 1 Active · AutoML + Anomaly Detection + Time Series + Quality Scorecard · Built with FastAPI + Python</p>
   </footer>
 
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

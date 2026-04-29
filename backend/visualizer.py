@@ -1,48 +1,46 @@
 """
 Visualization Engine
-Generates base64-encoded chart images using Matplotlib & Seaborn.
+Generates Plotly charts as JSON-serialisable dicts for the frontend.
 """
-import io, base64, warnings
+import json
+import warnings
+from typing import List
+
 import numpy as np
 import pandas as pd
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-import seaborn as sns
+import plotly.express as px
+import plotly.io as pio
 
 warnings.filterwarnings("ignore")
 
-# ── Palette & style ────────────────────────────────────────────────────────────
-PALETTE   = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b",
-             "#ef4444", "#ec4899", "#14b8a6", "#f97316", "#84cc16"]
-BG_COLOR  = "#0f0f1a"
-CARD_COLOR = "#1a1a2e"
-TEXT_COLOR = "#e2e8f0"
-GRID_COLOR = "#2d2d4e"
-
-def _fig_to_b64(fig) -> str:
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight",
-                facecolor=fig.get_facecolor(), dpi=120)
-    buf.seek(0)
-    encoded = base64.b64encode(buf.read()).decode()
-    plt.close(fig)
-    return encoded
+PALETTE = [
+    "#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b",
+    "#ef4444", "#ec4899", "#14b8a6", "#f97316", "#84cc16",
+]
+THEME_BG = "#0f0f1e"
+CARD_BG = "#13131f"
+TEXT = "#e2e8f0"
 
 
-def _base_style(fig, ax_list=None):
-    fig.patch.set_facecolor(BG_COLOR)
-    if ax_list:
-        for ax in (ax_list if isinstance(ax_list, list) else [ax_list]):
-            ax.set_facecolor(CARD_COLOR)
-            ax.tick_params(colors=TEXT_COLOR, labelsize=9)
-            ax.xaxis.label.set_color(TEXT_COLOR)
-            ax.yaxis.label.set_color(TEXT_COLOR)
-            ax.title.set_color(TEXT_COLOR)
-            for spine in ax.spines.values():
-                spine.set_edgecolor(GRID_COLOR)
-            ax.grid(color=GRID_COLOR, linestyle="--", linewidth=0.5, alpha=0.7)
+def _fig_to_dict(fig) -> dict:
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor=THEME_BG,
+        plot_bgcolor=CARD_BG,
+        font=dict(color=TEXT),
+        margin=dict(l=40, r=20, t=50, b=40),
+    )
+    return json.loads(pio.to_json(fig, pretty=False))
+
+
+def _sample_rows(df: pd.DataFrame, max_rows: int = 400) -> pd.DataFrame:
+    if len(df) <= max_rows:
+        return df
+    return df.sample(max_rows, random_state=42).sort_index()
+
+
+def _limit_cols(cols: List[str], max_cols: int) -> List[str]:
+    return cols[:max_cols] if cols else []
 
 
 def generate_charts(df: pd.DataFrame):
@@ -50,136 +48,77 @@ def generate_charts(df: pd.DataFrame):
     num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     cat_cols = df.select_dtypes(include=["object", "category"]).columns.tolist()
 
-    # ── 1. Missing Values Heatmap ──────────────────────────────────────────────
+    df_sample = _sample_rows(df, max_rows=500)
+
+    # 1) Missing Values Heatmap
     if df.isnull().sum().sum() > 0:
-        fig, ax = plt.subplots(figsize=(max(8, len(df.columns) * 0.6), 4))
-        _base_style(fig, ax)
-        missing_matrix = df.isnull().T
-        sns.heatmap(missing_matrix, ax=ax, cmap="RdYlGn_r",
-                    cbar_kws={"label": "Missing"},
-                    yticklabels=True, xticklabels=False,
-                    linewidths=0.3, linecolor=GRID_COLOR)
-        ax.set_title("Missing Values Heatmap", fontsize=13, fontweight="bold", pad=10)
-        ax.tick_params(colors=TEXT_COLOR)
-        charts.append({"title": "Missing Values Heatmap", "img": _fig_to_b64(fig)})
-
-    # ── 2. Distribution Plots (numeric) ───────────────────────────────────────
-    if num_cols:
-        n = len(num_cols)
-        cols_per_row = 3
-        rows = (n + cols_per_row - 1) // cols_per_row
-        fig, axes = plt.subplots(rows, cols_per_row,
-                                 figsize=(cols_per_row * 4.5, rows * 3.5))
-        fig.patch.set_facecolor(BG_COLOR)
-        axes_flat = np.array(axes).flatten()
-        for i, col in enumerate(num_cols):
-            ax = axes_flat[i]
-            _base_style(fig, ax)
-            data = df[col].dropna()
-            ax.hist(data, bins=30, color=PALETTE[i % len(PALETTE)],
-                    alpha=0.85, edgecolor="none")
-            # KDE overlay
-            try:
-                from scipy.stats import gaussian_kde
-                kde_x = np.linspace(data.min(), data.max(), 200)
-                kde   = gaussian_kde(data)
-                ax2   = ax.twinx()
-                ax2.plot(kde_x, kde(kde_x), color="white", lw=1.5, alpha=0.7)
-                ax2.set_yticks([])
-                ax2.set_facecolor(CARD_COLOR)
-            except Exception:
-                pass
-            ax.set_title(col, fontsize=10, fontweight="bold")
-            ax.set_xlabel("")
-        for j in range(i + 1, len(axes_flat)):
-            axes_flat[j].set_visible(False)
-        fig.suptitle("Numeric Distributions", fontsize=14, color=TEXT_COLOR,
-                     fontweight="bold", y=1.01)
-        fig.tight_layout()
-        charts.append({"title": "Numeric Distributions", "img": _fig_to_b64(fig)})
-
-    # ── 3. Box Plots (outlier view) ────────────────────────────────────────────
-    if num_cols:
-        fig, ax = plt.subplots(figsize=(max(8, len(num_cols) * 1.2), 5))
-        _base_style(fig, ax)
-        df_norm = df[num_cols].copy()
-        for col in df_norm.columns:
-            r = df_norm[col].max() - df_norm[col].min()
-            if r > 0:
-                df_norm[col] = (df_norm[col] - df_norm[col].min()) / r
-        bp = ax.boxplot(
-            [df_norm[c].dropna().values for c in num_cols],
-            patch_artist=True,
-            labels=num_cols,
-            medianprops=dict(color="white", linewidth=2),
-            whiskerprops=dict(color=TEXT_COLOR),
-            capprops=dict(color=TEXT_COLOR),
-            flierprops=dict(markerfacecolor=PALETTE[5], marker="o",
-                            markersize=3, alpha=0.5),
+        miss = df_sample.isnull().astype(int)
+        fig = px.imshow(
+            miss.T,
+            aspect="auto",
+            color_continuous_scale=[[0, CARD_BG], [1, "#ef4444"]],
+            labels=dict(x="Row", y="Column", color="Missing"),
         )
-        for patch, color in zip(bp["boxes"], PALETTE * 10):
-            patch.set_facecolor(color)
-            patch.set_alpha(0.75)
-        ax.set_title("Box Plots – Normalised (0-1 Scale)", fontsize=13,
-                     fontweight="bold")
-        ax.set_xticklabels(num_cols, rotation=35, ha="right", fontsize=9)
-        charts.append({"title": "Box Plots (Outlier View)", "img": _fig_to_b64(fig)})
+        fig.update_layout(title="Missing Values Heatmap", height=380)
+        fig.update_xaxes(showticklabels=False)
+        charts.append({"title": "Missing Values Heatmap", "plotly": _fig_to_dict(fig)})
 
-    # ── 4. Correlation Heatmap ─────────────────────────────────────────────────
+    # 2) Numeric Distributions
+    for i, col in enumerate(_limit_cols(num_cols, 4)):
+        fig = px.histogram(df_sample, x=col, nbins=30, title=f"Distribution: {col}")
+        fig.update_traces(marker_color=PALETTE[i % len(PALETTE)], opacity=0.85)
+        charts.append({"title": f"Distribution: {col}", "plotly": _fig_to_dict(fig)})
+
+    # 3) Box Plot (Outliers View)
+    if num_cols:
+        box_cols = _limit_cols(num_cols, 10)
+        melt = df_sample[box_cols].melt(var_name="column", value_name="value")
+        fig = px.box(melt, x="column", y="value", points="outliers", title="Box Plots")
+        fig.update_traces(marker_size=4)
+        fig.update_xaxes(tickangle=25)
+        charts.append({"title": "Box Plots (Outlier View)", "plotly": _fig_to_dict(fig)})
+
+    # 4) Correlation Heatmap
     if len(num_cols) >= 2:
-        corr = df[num_cols].corr()
-        size = max(6, min(14, len(num_cols)))
-        fig, ax = plt.subplots(figsize=(size, size * 0.8))
-        _base_style(fig, ax)
-        mask = np.triu(np.ones_like(corr, dtype=bool))
-        cmap = sns.diverging_palette(250, 10, as_cmap=True)
-        sns.heatmap(corr, ax=ax, mask=mask, cmap=cmap,
-                    annot=True, fmt=".2f", annot_kws={"size": 8},
-                    linewidths=0.5, linecolor=GRID_COLOR,
-                    vmin=-1, vmax=1,
-                    cbar_kws={"shrink": 0.8})
-        ax.set_title("Correlation Heatmap", fontsize=13, fontweight="bold", pad=12)
-        ax.tick_params(axis="x", rotation=35)
-        charts.append({"title": "Correlation Heatmap", "img": _fig_to_b64(fig)})
+        corr_cols = _limit_cols(num_cols, 12)
+        corr = df[corr_cols].corr()
+        fig = px.imshow(
+            corr,
+            text_auto=True,
+            color_continuous_scale="RdBu",
+            zmin=-1,
+            zmax=1,
+            title="Correlation Heatmap",
+        )
+        charts.append({"title": "Correlation Heatmap", "plotly": _fig_to_dict(fig)})
 
-    # ── 5. Categorical Bar Charts ──────────────────────────────────────────────
-    for col in cat_cols[:4]:
-        vc = df[col].value_counts().head(12)
+    # 5) Categorical Bar Charts
+    for i, col in enumerate(_limit_cols(cat_cols, 4)):
+        vc = df_sample[col].value_counts().head(12)
         if len(vc) < 2:
             continue
-        fig, ax = plt.subplots(figsize=(8, 4))
-        _base_style(fig, ax)
-        bars = ax.barh(vc.index.astype(str)[::-1],
-                       vc.values[::-1],
-                       color=[PALETTE[i % len(PALETTE)] for i in range(len(vc))],
-                       edgecolor="none", height=0.65)
-        for bar, val in zip(bars, vc.values[::-1]):
-            ax.text(bar.get_width() + vc.values.max() * 0.01,
-                    bar.get_y() + bar.get_height() / 2,
-                    str(val), va="center", fontsize=8, color=TEXT_COLOR)
-        ax.set_title(f"'{col}' – Value Counts (Top {len(vc)})",
-                     fontsize=12, fontweight="bold")
-        ax.set_xlabel("Count")
-        ax.set_xlim(0, vc.values.max() * 1.18)
-        charts.append({"title": f"'{col}' Value Counts", "img": _fig_to_b64(fig)})
+        fig = px.bar(
+            x=vc.values,
+            y=[str(v) for v in vc.index],
+            orientation="h",
+            title=f"'{col}' Value Counts",
+        )
+        fig.update_traces(marker_color=PALETTE[i % len(PALETTE)])
+        fig.update_layout(yaxis=dict(autorange="reversed"))
+        charts.append({"title": f"'{col}' Value Counts", "plotly": _fig_to_dict(fig)})
 
-    # ── 6. Pairplot / Scatter Matrix (up to 5 numeric cols) ───────────────────
+    # 6) Scatter Matrix
     if 2 <= len(num_cols) <= 6:
-        sample = df[num_cols].dropna().sample(min(500, len(df)), random_state=42)
-        g = sns.pairplot(sample, diag_kind="kde",
-                         plot_kws={"alpha": 0.4, "s": 15,
-                                   "color": PALETTE[0]},
-                         diag_kws={"color": PALETTE[2], "fill": True})
-        g.fig.patch.set_facecolor(BG_COLOR)
-        for ax in g.axes.flatten():
-            ax.set_facecolor(CARD_COLOR)
-            ax.tick_params(colors=TEXT_COLOR, labelsize=7)
-            ax.xaxis.label.set_color(TEXT_COLOR)
-            ax.yaxis.label.set_color(TEXT_COLOR)
-            for sp in ax.spines.values():
-                sp.set_edgecolor(GRID_COLOR)
-        g.fig.suptitle("Scatter Matrix", fontsize=14, color=TEXT_COLOR,
-                       fontweight="bold", y=1.01)
-        charts.append({"title": "Scatter Matrix", "img": _fig_to_b64(g.fig)})
+        sm_cols = _limit_cols(num_cols, 5)
+        sm_sample = df_sample[sm_cols].dropna()
+        if len(sm_sample) >= 5:
+            fig = px.scatter_matrix(
+                sm_sample,
+                dimensions=sm_cols,
+                title="Scatter Matrix",
+                color_discrete_sequence=[PALETTE[0]],
+            )
+            fig.update_traces(diagonal_visible=False, marker=dict(size=4, opacity=0.6))
+            charts.append({"title": "Scatter Matrix", "plotly": _fig_to_dict(fig)})
 
     return charts

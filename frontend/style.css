@@ -593,6 +593,87 @@ table.data-table tr:hover td { background: var(--card2); color: var(--text); }
   display: block;
   border-radius: 0 0 var(--radius) var(--radius);
 }
+.chart-plot {
+  width: 100%;
+  min-height: 360px;
+  height: 380px;
+}
+.chart-meta {
+  border-top: 1px solid var(--border);
+  background: var(--card2);
+}
+
+/* ── Phase 1 panels ── */
+.section-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.metric-item {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.metric-item .label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text3);
+  margin-bottom: 6px;
+}
+.metric-item .value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(99,102,241,0.15);
+  border: 1px solid rgba(99,102,241,0.3);
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tag.success { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3); color: var(--success); }
+.tag.warning { background: rgba(245,158,11,0.15); border-color: rgba(245,158,11,0.3); color: var(--warning); }
+.tag.danger  { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: var(--danger); }
+
+.split-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+.mini-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text2);
+}
+.mini-list strong { color: var(--text); }
 
 /* ── Preview panel ── */
 .preview-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
