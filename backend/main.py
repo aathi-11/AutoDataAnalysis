@@ -15,6 +15,7 @@ from ml_predictor     import run_automl
 from anomaly_detector import detect_anomalies
 from time_series      import analyze_time_series
 from quality_scorecard import compute_quality_scorecard
+from phase2_ai import run_phase2_ai
 
 app = FastAPI(title="Autonomous Data Analyst API", version="2.0.0")
 
@@ -51,6 +52,14 @@ def _serialise_preview(df: pd.DataFrame, n: int = 50):
     return preview
 
 
+def _run_base_pipeline(df_raw: pd.DataFrame):
+    df_clean, clean_report = clean_data(df_raw.copy())
+    eda_report = run_eda(df_clean)
+    charts = generate_charts(df_clean)
+    preview = _serialise_preview(df_clean)
+    return df_clean, clean_report, eda_report, charts, preview
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Endpoints
 # ─────────────────────────────────────────────────────────────────────────────
@@ -73,10 +82,7 @@ async def analyze(file: UploadFile = File(...)):
         if df_raw is None or df_raw.empty:
             raise HTTPException(status_code=400, detail="CSV is empty or could not be parsed.")
 
-        df_clean, clean_report = clean_data(df_raw.copy())
-        eda_report             = run_eda(df_clean)
-        charts                 = generate_charts(df_clean)
-        preview                = _serialise_preview(df_clean)
+        df_clean, clean_report, eda_report, charts, preview = _run_base_pipeline(df_raw)
 
         return JSONResponse({
             "filename":     file.filename,
@@ -111,10 +117,7 @@ async def analyze_phase1(file: UploadFile = File(...)):
             raise HTTPException(status_code=400, detail="CSV is empty or could not be parsed.")
 
         # ── Core pipeline ─────────────────────────────────────────────────────
-        df_clean, clean_report = clean_data(df_raw.copy())
-        eda_report             = run_eda(df_clean)
-        charts                 = generate_charts(df_clean)
-        preview                = _serialise_preview(df_clean)
+        df_clean, clean_report, eda_report, charts, preview = _run_base_pipeline(df_raw)
 
         # ── Phase 1 additions ─────────────────────────────────────────────────
         ml_report       = run_automl(df_clean.copy())
@@ -135,6 +138,53 @@ async def analyze_phase1(file: UploadFile = File(...)):
             "time_series":  ts_report,
             "quality":      quality_report,
         })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/analyze/phase2")
+async def analyze_phase2(file: UploadFile = File(...)):
+    """
+    Phase 2 pipeline:
+    Phase 1 outputs + Gemini-generated correlation insights, chart recommendations,
+    hypotheses, and a narrative report.
+    """
+    if not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Only CSV files are supported.")
+
+    try:
+        content = await file.read()
+        df_raw = _read_csv(content)
+
+        if df_raw is None or df_raw.empty:
+            raise HTTPException(status_code=400, detail="CSV is empty or could not be parsed.")
+
+        df_clean, clean_report, eda_report, charts, preview = _run_base_pipeline(df_raw)
+
+        ml_report = run_automl(df_clean.copy())
+        anomaly_report = detect_anomalies(df_clean.copy())
+        ts_report = analyze_time_series(df_clean.copy())
+        quality_report = compute_quality_scorecard(df_clean.copy(), clean_report)
+
+        phase1_payload = {
+            "filename":     file.filename,
+            "cleaning":     clean_report,
+            "eda":          eda_report,
+            "charts":       charts,
+            "preview":      preview,
+            "preview_cols": df_clean.columns.tolist(),
+            "ml":           ml_report,
+            "anomaly":      anomaly_report,
+            "time_series":  ts_report,
+            "quality":      quality_report,
+        }
+
+        phase1_payload["ai"] = run_phase2_ai(phase1_payload)
+        return JSONResponse(phase1_payload)
 
     except HTTPException:
         raise

@@ -15,6 +15,11 @@ venv/
 env/
 .venv/
 
+# Environment files
+.env
+.env.*
+!.env.example
+
 # IDE
 .vscode/
 .idea/
@@ -22,3 +27,6 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Text files
+*.txt

@@ -3,6 +3,7 @@
    ═══════════════════════════════════════════════════ */
 
 const API = "http://127.0.0.1:8000";
+const ANALYZE_ENDPOINT = "/analyze/phase2";
 let analysisData = null;
 
 // ── DOM refs ──────────────────────────────────────────────────────────────────
@@ -134,7 +135,7 @@ analyzeBtn.addEventListener("click", async () => {
   form.append("file", selectedFileObj);
 
   try {
-    const res = await fetch(`${API}/analyze/phase1`, { method: "POST", body: form });
+    const res = await fetch(`${API}${ANALYZE_ENDPOINT}`, { method: "POST", body: form });
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.detail || "Server error");
@@ -182,6 +183,7 @@ function renderReport(data) {
   renderTimeSeries(data.time_series);
   renderPreview(data.preview, data.preview_cols);
   renderInsights(data.eda.insights);
+  renderPhase2AI(data.ai);
 }
 
 // ── KPI ───────────────────────────────────────────────────────────────────────
@@ -348,6 +350,117 @@ function renderTimeSeries(ts) {
   panel.innerHTML = html;
 }
 
+// ── PHASE 2 AI RENDERERS ───────────────────────────────────────────────────
+
+function renderPhase2AI(ai) {
+  const err = ai && ai.error ? ai.error : null;
+  renderAICorrelations(ai ? ai.correlation_detective : null, err);
+  renderAIChartIdeas(ai ? ai.chart_recommender : null, err);
+  renderAIHypotheses(ai ? ai.hypothesis_tester : null, err);
+  renderAIReport(ai ? ai.auto_report : null, err);
+}
+
+function renderAICorrelations(corr, err) {
+  const panel = document.getElementById("tab-ai-correlations");
+  if (!panel) return;
+  if (err) { panel.innerHTML = `<div class="no-insights">${err}</div>`; return; }
+  if (!corr || !corr.pairs || corr.pairs.length === 0) {
+    panel.innerHTML = `<div class="no-insights">AI correlation insights not available.</div>`; return;
+  }
+
+  let html = `<div class="section-card"><div class="section-title">Correlation Detective</div>`;
+  if (corr.summary) {
+    html += `<div class="insight-text">${corr.summary}</div>`;
+  }
+  html += `</div><div class="col-cards">`;
+
+  corr.pairs.forEach(p => {
+    const corrVal = p.corr !== undefined ? p.corr : "—";
+    html += `<div class="col-card">
+      <div class="col-card-header"><span class="col-name">${p.pair || "Pair"}</span><span class="col-dtype">corr: ${corrVal}</span></div>
+      <div class="col-stats">
+        <div class="stat-row"><span>Insight</span><span style="white-space:normal;color:var(--text2);font-family:var(--font);">${p.insight || "—"}</span></div>
+        <div class="stat-row"><span>Risk</span><span style="white-space:normal;color:var(--text2);font-family:var(--font);">${p.risk || "—"}</span></div>
+      </div>
+    </div>`;
+  });
+
+  html += `</div>`;
+  panel.innerHTML = html;
+}
+
+function renderAIChartIdeas(recs, err) {
+  const panel = document.getElementById("tab-ai-charts");
+  if (!panel) return;
+  if (err) { panel.innerHTML = `<div class="no-insights">${err}</div>`; return; }
+  if (!recs || !recs.recommendations || recs.recommendations.length === 0) {
+    panel.innerHTML = `<div class="no-insights">AI chart recommendations not available.</div>`; return;
+  }
+
+  let html = `<div class="col-cards">`;
+  recs.recommendations.forEach(r => {
+    const priority = (r.priority || "medium").toLowerCase();
+    const tagClass = priority === "high" ? "tag success" : priority === "low" ? "tag danger" : "tag warning";
+    const cols = Array.isArray(r.columns) ? r.columns.join(", ") : "—";
+    html += `<div class="col-card">
+      <div class="col-card-header"><span class="col-name">${r.title || "Chart"}</span><span class="col-dtype">${r.chart_type || "Chart"}</span></div>
+      <div class="col-stats">
+        <div class="stat-row"><span>Columns</span><span>${cols}</span></div>
+        <div class="stat-row"><span>Priority</span><span><span class="${tagClass}">${priority.toUpperCase()}</span></span></div>
+        <div class="stat-row"><span>Why</span><span style="white-space:normal;color:var(--text2);font-family:var(--font);">${r.why || "—"}</span></div>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  panel.innerHTML = html;
+}
+
+function renderAIHypotheses(hypos, err) {
+  const panel = document.getElementById("tab-ai-hypotheses");
+  if (!panel) return;
+  if (err) { panel.innerHTML = `<div class="no-insights">${err}</div>`; return; }
+  if (!hypos || !hypos.hypotheses || hypos.hypotheses.length === 0) {
+    panel.innerHTML = `<div class="no-insights">AI hypotheses not available.</div>`; return;
+  }
+
+  let html = `<div class="insight-list">`;
+  hypos.hypotheses.forEach(h => {
+    const cols = Array.isArray(h.required_columns) ? h.required_columns.join(", ") : "—";
+    html += `<div class="insight-card">
+      <div class="insight-icon">H</div>
+      <div class="insight-text">
+        <strong>Hypothesis:</strong> ${h.hypothesis || "—"}<br/>
+        <strong>Rationale:</strong> ${h.rationale || "—"}<br/>
+        <strong>Test:</strong> ${h.test || "—"}<br/>
+        <strong>Columns:</strong> ${cols}
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+  panel.innerHTML = html;
+}
+
+function renderAIReport(report, err) {
+  const panel = document.getElementById("tab-ai-report");
+  if (!panel) return;
+  if (err) { panel.innerHTML = `<div class="no-insights">${err}</div>`; return; }
+  if (!report) { panel.innerHTML = `<div class="no-insights">AI report not available.</div>`; return; }
+
+  const list = (items) => {
+    if (!items || items.length === 0) return `<div class="no-insights" style="padding:16px;">No items.</div>`;
+    return `<div class="mini-list">${items.map(i => `<div>${i}</div>`).join("")}</div>`;
+  };
+
+  let html = `<div class="section-card"><div class="section-title">Executive Summary</div>`;
+  html += `<div class="insight-text">${report.executive_summary || "—"}</div></div>`;
+  html += `<div class="split-grid">`;
+  html += `<div class="section-card"><div class="section-title">Key Findings</div>${list(report.key_findings)}</div>`;
+  html += `<div class="section-card"><div class="section-title">Risks</div>${list(report.risks)}</div>`;
+  html += `<div class="section-card"><div class="section-title">Recommendations</div>${list(report.recommendations)}</div>`;
+  html += `</div>`;
+  panel.innerHTML = html;
+}
+
 // ── OLD TABS (CLEANING, EDA, CHARTS, PREVIEW, INSIGHTS) ───────────────────────
 
 function renderCleaning(cl) {
@@ -439,7 +552,85 @@ function renderInsights(insights) {
 }
 
 // ── DOWNLOAD REPORT ────────────────────────────────────────────────────────────
+function escapeHtml(value) {
+  if (value === null || value === undefined) return "";
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function buildReportHtml(data) {
+  const auto = data?.ai?.auto_report || {};
+  const overview = data?.eda?.overview || {};
+  const title = data?.filename ? `${data.filename} Report` : "AutoAnalyst Report";
+
+  const summary = auto.executive_summary || "AI report not available. This report includes the dataset overview and key EDA notes.";
+  const keyFindings = auto.key_findings && auto.key_findings.length ? auto.key_findings : (data?.eda?.insights || []);
+  const risks = auto.risks || [];
+  const recs = auto.recommendations || [];
+
+  const list = (items) => {
+    if (!items || items.length === 0) return "<li>None</li>";
+    return items.map(i => `<li>${escapeHtml(i)}</li>`).join("");
+  };
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 32px; color: #111827; }
+    h1 { margin-bottom: 4px; }
+    h2 { margin-top: 28px; }
+    .muted { color: #6b7280; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
+    ul { padding-left: 18px; }
+  </style>
+</head>
+<body>
+  <h1>${escapeHtml(title)}</h1>
+  <div class="muted">Generated on ${escapeHtml(new Date().toLocaleString())}</div>
+
+  <h2>Dataset Overview</h2>
+  <div class="grid">
+    <div class="card"><strong>Rows</strong><div>${escapeHtml(overview.rows ?? "—")}</div></div>
+    <div class="card"><strong>Columns</strong><div>${escapeHtml(overview.columns ?? "—")}</div></div>
+    <div class="card"><strong>Missing Cells</strong><div>${escapeHtml(overview.missing_cells ?? "—")}</div></div>
+    <div class="card"><strong>Missing %</strong><div>${escapeHtml(overview.missing_pct ?? "—")}%</div></div>
+  </div>
+
+  <h2>Executive Summary</h2>
+  <div class="card">${escapeHtml(summary)}</div>
+
+  <h2>Key Findings</h2>
+  <ul>${list(keyFindings)}</ul>
+
+  <h2>Risks</h2>
+  <ul>${list(risks)}</ul>
+
+  <h2>Recommendations</h2>
+  <ul>${list(recs)}</ul>
+</body>
+</html>`;
+}
+
 downloadBtn.addEventListener("click", () => {
   if (!analysisData) return;
-  alert("Report download functionality can be expanded for Phase 1 components. Basic download disabled temporarily to save tokens.");
+  const html = buildReportHtml(analysisData);
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const base = (analysisData.filename || "autoanalyst").replace(/\.csv$/i, "");
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${base}_report.html`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 });
